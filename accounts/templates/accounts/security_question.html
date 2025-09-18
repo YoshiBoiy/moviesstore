@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="p-3 mt-4">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-md-6">
+        <div class="card shadow p-3 mb-4 rounded">
+          <div class="card-body">
+            <h2>Security Question</h2>
+            <hr />
+            <p class="text-muted">Please answer your security question to reset your password.</p>
+            
+            {% if messages %}
+              {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                  {{ message }}
+                  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+              {% endfor %}
+            {% endif %}
+            
+            <div class="alert alert-info">
+              <strong>Security Question:</strong><br>
+              {{ template_data.question }}
+            </div>
+            
+            <form method="POST">
+              {% csrf_token %}
+              <div class="mb-3">
+                <label for="answer" class="form-label">Your Answer</label>
+                <input type="text" 
+                       class="form-control" 
+                       id="answer" 
+                       name="answer" 
+                       placeholder="Enter your answer"
+                       required>
+              </div>
+              
+              <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-primary">
+                  <i class="fas fa-check me-2"></i>Verify Answer
+                </button>
+                <a href="{% url 'accounts.forgot_password' %}" class="btn btn-outline-secondary">
+                  <i class="fas fa-arrow-left me-2"></i>Back
+                </a>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock content %}
