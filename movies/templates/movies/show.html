@@ -9,6 +9,50 @@
         <hr />
         <p><b>Description:</b> {{ template_data.movie.description }}</p>
         <p><b>Price:</b> ${{ template_data.movie.price }}</p>
+        
+        <!-- Rating Section -->
+        <div class="mb-3">
+          <h6><i class="fas fa-star me-1"></i>Rating:</h6>
+          <div class="d-flex align-items-center">
+            <div class="me-3">
+              <span class="display-6 text-primary">{{ template_data.rating_stats.average_rating }}</span>
+              <span class="text-muted">/5</span>
+            </div>
+            <div class="me-3">
+              <div class="d-flex">
+                {% for i in "12345" %}
+                  {% if i|add:0 <= template_data.rating_stats.average_rating %}
+                    <i class="fas fa-star text-warning"></i>
+                  {% elif i|add:0|sub:0.5 <= template_data.rating_stats.average_rating %}
+                    <i class="fas fa-star-half-alt text-warning"></i>
+                  {% else %}
+                    <i class="far fa-star text-muted"></i>
+                  {% endif %}
+                {% endfor %}
+              </div>
+            </div>
+            <div class="text-muted small">
+              ({{ template_data.rating_stats.total_ratings }} rating{{ template_data.rating_stats.total_ratings|pluralize }})
+            </div>
+          </div>
+          
+          {% if user.is_authenticated %}
+            <div class="mt-2">
+              {% if template_data.user_rating %}
+                <span class="text-success">
+                  <i class="fas fa-check-circle me-1"></i>You rated this {{ template_data.user_rating.rating }} star{{ template_data.user_rating.rating|pluralize }}
+                </span>
+                <a href="{% url 'ratings:rate_movie' template_data.movie.id %}" class="btn btn-sm btn-outline-primary ms-2">
+                  <i class="fas fa-edit me-1"></i>Update Rating
+                </a>
+              {% else %}
+                <a href="{% url 'ratings:rate_movie' template_data.movie.id %}" class="btn btn-sm btn-primary">
+                  <i class="fas fa-star me-1"></i>Rate This Movie
+                </a>
+              {% endif %}
+            </div>
+          {% endif %}
+        </div>
         <p class="card-text">
           <form method="post" action="{% url 'cart.add' id=template_data.movie.id %}">
             <div class="row">

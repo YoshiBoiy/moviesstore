@@ -1,0 +1,211 @@
+{% extends 'base.html' %}
+
+{% block title %}Rate {{ movie.name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        <i class="fas fa-star me-2"></i>Rate Movie: {{ movie.name }}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            {% if movie.image %}
+                                <img src="{{ movie.image.url }}" class="img-fluid rounded" alt="{{ movie.name }}">
+                            {% else %}
+                                <div class="bg-light rounded d-flex align-items-center justify-content-center" style="height: 300px;">
+                                    <i class="fas fa-film fa-3x text-muted"></i>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-8">
+                            <h5>{{ movie.name }}</h5>
+                            <p class="text-muted">${{ movie.price }}</p>
+                            <p>{{ movie.description }}</p>
+                            
+                            <!-- Rating Form -->
+                            <div class="mt-4">
+                                <h6>Your Rating:</h6>
+                                <div class="rating-stars" data-movie-id="{{ movie.id }}">
+                                    {% for i in "12345" %}
+                                        <i class="fas fa-star star" data-rating="{{ i }}" style="font-size: 2rem; color: #ddd; cursor: pointer; margin-right: 5px;"></i>
+                                    {% endfor %}
+                                </div>
+                                <div class="mt-2">
+                                    <button class="btn btn-primary" id="submitRating" disabled>
+                                        <i class="fas fa-check me-2"></i>Submit Rating
+                                    </button>
+                                    {% if user_rating %}
+                                        <button class="btn btn-danger ms-2" id="deleteRating">
+                                            <i class="fas fa-trash me-2"></i>Delete Rating
+                                        </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Rating Statistics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        <div class="display-4 text-primary">{{ rating_stats.average_rating }}</div>
+                        <div class="text-muted">out of 5 stars</div>
+                        <div class="small text-muted">{{ rating_stats.total_ratings }} ratings</div>
+                    </div>
+                    
+                    <!-- Rating Distribution -->
+                    <h6>Rating Distribution:</h6>
+                    {% for rating, count in rating_stats.rating_distribution.items %}
+                        <div class="d-flex align-items-center mb-2">
+                            <div class="me-2">{{ rating }} star{{ rating|pluralize }}:</div>
+                            <div class="progress flex-grow-1 me-2" style="height: 20px;">
+                                <div class="progress-bar" role="progressbar" 
+                                     style="width: {% if rating_stats.total_ratings > 0 %}{{ count|floatformat:0|div:rating_stats.total_ratings|mul:100 }}{% else %}0{% endif %}%">
+                                </div>
+                            </div>
+                            <div class="small text-muted">{{ count }}</div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const stars = document.querySelectorAll('.star');
+    const submitBtn = document.getElementById('submitRating');
+    const deleteBtn = document.getElementById('deleteRating');
+    const movieId = document.querySelector('.rating-stars').dataset.movieId;
+    let selectedRating = 0;
+    
+    // Initialize with user's existing rating
+    {% if user_rating %}
+        selectedRating = {{ user_rating.rating }};
+        highlightStars(selectedRating);
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-edit me-2"></i>Update Rating';
+    {% endif %}
+    
+    // Star click handlers
+    stars.forEach((star, index) => {
+        star.addEventListener('click', function() {
+            selectedRating = parseInt(this.dataset.rating);
+            highlightStars(selectedRating);
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = selectedRating === {{ user_rating.rating|default:0 }} ? 
+                '<i class="fas fa-edit me-2"></i>Update Rating' : 
+                '<i class="fas fa-check me-2"></i>Submit Rating';
+        });
+        
+        star.addEventListener('mouseenter', function() {
+            const rating = parseInt(this.dataset.rating);
+            highlightStars(rating);
+        });
+    });
+    
+    // Reset stars on mouse leave
+    document.querySelector('.rating-stars').addEventListener('mouseleave', function() {
+        highlightStars(selectedRating);
+    });
+    
+    function highlightStars(rating) {
+        stars.forEach((star, index) => {
+            if (index < rating) {
+                star.style.color = '#ffc107';
+            } else {
+                star.style.color = '#ddd';
+            }
+        });
+    }
+    
+    // Submit rating
+    submitBtn.addEventListener('click', function() {
+        if (selectedRating === 0) return;
+        
+        fetch(`/ratings/api/submit/${movieId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ rating: selectedRating })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast(data.message, 'success');
+                // Reload page to show updated stats
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showToast(data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Error submitting rating', 'error');
+        });
+    });
+    
+    // Delete rating
+    if (deleteBtn) {
+        deleteBtn.addEventListener('click', function() {
+            if (confirm('Are you sure you want to delete your rating?')) {
+                fetch(`/ratings/api/delete/${movieId}/`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast(data.message, 'success');
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        showToast(data.error, 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('Error deleting rating', 'error');
+                });
+            }
+        });
+    }
+    
+    function showToast(message, type) {
+        // Simple alert for now - can be enhanced with toast notifications
+        alert(message);
+    }
+    
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+});
+</script>
+{% endblock %}

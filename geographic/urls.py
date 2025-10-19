@@ -1,6 +1,8 @@
 from django.urls import path
 from . import views
 
+app_name = 'geographic'
+
 urlpatterns = [
     path('trending-map/', views.TrendingMapView.as_view(), name='trending_map'),
     path('api/trending-data/', views.trending_data_api, name='trending_data_api'),
