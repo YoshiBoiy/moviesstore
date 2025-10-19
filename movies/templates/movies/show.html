@@ -23,7 +23,7 @@
                 {% for i in "12345" %}
                   {% if i|add:0 <= template_data.rating_stats.average_rating %}
                     <i class="fas fa-star text-warning"></i>
-                  {% elif i|add:0|sub:0.5 <= template_data.rating_stats.average_rating %}
+                  {% elif i|add:0|add:-0.5 <= template_data.rating_stats.average_rating %}
                     <i class="fas fa-star-half-alt text-warning"></i>
                   {% else %}
                     <i class="far fa-star text-muted"></i>

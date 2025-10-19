@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load rating_filters %}
 
 {% block title %}Rate {{ movie.name }}{% endblock %}
 
@@ -216,7 +217,7 @@
                             {% for i in "12345" %}
                                 {% if i|add:0 <= rating_stats.average_rating %}
                                     <i class="fas fa-star text-warning"></i>
-                                {% elif i|add:0|sub:0.5 <= rating_stats.average_rating %}
+                                {% elif i|add:0|add:-0.5 <= rating_stats.average_rating %}
                                     <i class="fas fa-star-half-alt text-warning"></i>
                                 {% else %}
                                     <i class="far fa-star text-muted"></i>
@@ -236,11 +237,11 @@
                         <div class="mb-2">
                             <div class="d-flex justify-content-between align-items-center mb-1">
                                 <span class="small">{{ rating }} star{{ rating|pluralize }}:</span>
-                                <span class="small text-muted">{{ count }}</span>
+                                <span class="small text-muted">{{ count }} ({{ rating_percentages|default_if_none:0|lookup:rating }}%)</span>
                             </div>
                             <div class="progress" style="height: 8px;">
                                 <div class="progress-bar progress-bar-custom" role="progressbar" 
-                                     style="width: {% if rating_stats.total_ratings > 0 %}{{ count|floatformat:0|div:rating_stats.total_ratings|mul:100 }}{% else %}0{% endif %}%">
+                                     style="width: {{ rating_percentages|default_if_none:0|lookup:rating }}%">
                                 </div>
                             </div>
                         </div>

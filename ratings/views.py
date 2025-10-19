@@ -20,10 +20,20 @@ class RatingView(View):
         user_rating = RatingService.get_user_rating(request.user, movie)
         rating_stats = RatingService.get_movie_rating_stats(movie)
         
+        # Calculate percentages for rating distribution
+        rating_percentages = {}
+        if rating_stats['total_ratings'] > 0:
+            for rating, count in rating_stats['rating_distribution'].items():
+                percentage = (count / rating_stats['total_ratings']) * 100
+                rating_percentages[rating] = round(percentage, 1)
+        else:
+            rating_percentages = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
+        
         context = {
             'movie': movie,
             'user_rating': user_rating,
             'rating_stats': rating_stats,
+            'rating_percentages': rating_percentages,
         }
         return render(request, 'ratings/rate_movie.html', context)
 
