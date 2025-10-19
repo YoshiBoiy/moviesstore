@@ -3,79 +3,246 @@
 {% block title %}Rate {{ movie.name }}{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <div class="row">
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-header">
-                    <h4 class="mb-0">
-                        <i class="fas fa-star me-2"></i>Rate Movie: {{ movie.name }}
-                    </h4>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-4">
-                            {% if movie.image %}
-                                <img src="{{ movie.image.url }}" class="img-fluid rounded" alt="{{ movie.name }}">
-                            {% else %}
-                                <div class="bg-light rounded d-flex align-items-center justify-content-center" style="height: 300px;">
-                                    <i class="fas fa-film fa-3x text-muted"></i>
-                                </div>
-                            {% endif %}
-                        </div>
-                        <div class="col-md-8">
-                            <h5>{{ movie.name }}</h5>
-                            <p class="text-muted">${{ movie.price }}</p>
-                            <p>{{ movie.description }}</p>
-                            
-                            <!-- Rating Form -->
-                            <div class="mt-4">
-                                <h6>Your Rating:</h6>
-                                <div class="rating-stars" data-movie-id="{{ movie.id }}">
-                                    {% for i in "12345" %}
-                                        <i class="fas fa-star star" data-rating="{{ i }}" style="font-size: 2rem; color: #ddd; cursor: pointer; margin-right: 5px;"></i>
-                                    {% endfor %}
-                                </div>
-                                <div class="mt-2">
-                                    <button class="btn btn-primary" id="submitRating" disabled>
-                                        <i class="fas fa-check me-2"></i>Submit Rating
-                                    </button>
-                                    {% if user_rating %}
-                                        <button class="btn btn-danger ms-2" id="deleteRating">
-                                            <i class="fas fa-trash me-2"></i>Delete Rating
+<!-- Custom CSS for rating interface -->
+<style>
+    .rating-container {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 2rem 0;
+    }
+    
+    .rating-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+    
+    .rating-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        text-align: center;
+    }
+    
+    .rating-header h1 {
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+    
+    .rating-stars {
+        display: flex;
+        justify-content: center;
+        gap: 0.5rem;
+        margin: 1rem 0;
+    }
+    
+    .star {
+        font-size: 3rem;
+        color: #ddd;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        user-select: none;
+    }
+    
+    .star:hover,
+    .star.active {
+        color: #ffc107;
+        transform: scale(1.1);
+    }
+    
+    .star.rated {
+        color: #ffc107;
+    }
+    
+    .rating-feedback {
+        text-align: center;
+        margin: 1rem 0;
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: #667eea;
+        min-height: 2rem;
+    }
+    
+    .movie-poster {
+        width: 100%;
+        height: 400px;
+        object-fit: cover;
+        border-radius: 10px;
+    }
+    
+    .movie-poster-placeholder {
+        width: 100%;
+        height: 400px;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #6c757d;
+    }
+    
+    .stats-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        padding: 1.5rem;
+    }
+    
+    .stat-item {
+        text-align: center;
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 10px;
+        margin-bottom: 1rem;
+    }
+    
+    .stat-number {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #667eea;
+    }
+    
+    .stat-label {
+        font-size: 0.9rem;
+        color: #6c757d;
+        margin-top: 0.25rem;
+    }
+    
+    .progress-bar-custom {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .rating-description {
+        font-size: 0.9rem;
+        color: #6c757d;
+        text-align: center;
+        margin-top: 0.5rem;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        margin-top: 2rem;
+    }
+    
+    .btn-rating {
+        padding: 0.75rem 2rem;
+        border-radius: 25px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-rating:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+    
+    .toast-container {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 1050;
+    }
+</style>
+
+<div class="rating-container">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="rating-card">
+                    <div class="rating-header">
+                        <h1><i class="fas fa-star me-3"></i>Rate This Movie</h1>
+                        <p class="mb-0">Share your opinion and help others discover great movies</p>
+                    </div>
+                    
+                    <div class="p-4">
+                        <div class="row">
+                            <div class="col-md-4">
+                                {% if movie.image %}
+                                    <img src="{{ movie.image.url }}" class="movie-poster" alt="{{ movie.name }}">
+                                {% else %}
+                                    <div class="movie-poster-placeholder">
+                                        <i class="fas fa-film fa-4x"></i>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-8">
+                                <h3 class="mb-2">{{ movie.name }}</h3>
+                                <p class="text-muted mb-2">${{ movie.price }}</p>
+                                <p class="mb-4">{{ movie.description }}</p>
+                                
+                                <!-- Enhanced Rating Interface -->
+                                <div class="text-center">
+                                    <h5 class="mb-3">How would you rate this movie?</h5>
+                                    <div class="rating-stars" data-movie-id="{{ movie.id }}">
+                                        {% for i in "12345" %}
+                                            <i class="fas fa-star star" data-rating="{{ i }}"></i>
+                                        {% endfor %}
+                                    </div>
+                                    <div class="rating-feedback" id="ratingFeedback"></div>
+                                    <div class="rating-description" id="ratingDescription">
+                                        Click on a star to rate this movie
+                                    </div>
+                                    
+                                    <div class="action-buttons">
+                                        <button class="btn btn-primary btn-rating" id="submitRating" disabled>
+                                            <i class="fas fa-check me-2"></i>Submit Rating
                                         </button>
-                                    {% endif %}
+                                        {% if user_rating %}
+                                            <button class="btn btn-danger btn-rating" id="deleteRating">
+                                                <i class="fas fa-trash me-2"></i>Delete Rating
+                                            </button>
+                                        {% endif %}
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-        
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">Rating Statistics</h5>
-                </div>
-                <div class="card-body">
-                    <div class="text-center mb-3">
-                        <div class="display-4 text-primary">{{ rating_stats.average_rating }}</div>
-                        <div class="text-muted">out of 5 stars</div>
-                        <div class="small text-muted">{{ rating_stats.total_ratings }} ratings</div>
+            
+            <div class="col-lg-4">
+                <div class="stats-card">
+                    <h5 class="mb-4 text-center">
+                        <i class="fas fa-chart-bar me-2"></i>Rating Statistics
+                    </h5>
+                    
+                    <div class="text-center mb-4">
+                        <div class="stat-number">{{ rating_stats.average_rating }}</div>
+                        <div class="stat-label">Average Rating</div>
+                        <div class="d-flex justify-content-center mt-2">
+                            {% for i in "12345" %}
+                                {% if i|add:0 <= rating_stats.average_rating %}
+                                    <i class="fas fa-star text-warning"></i>
+                                {% elif i|add:0|sub:0.5 <= rating_stats.average_rating %}
+                                    <i class="fas fa-star-half-alt text-warning"></i>
+                                {% else %}
+                                    <i class="far fa-star text-muted"></i>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <div class="stat-item">
+                        <div class="stat-number">{{ rating_stats.total_ratings }}</div>
+                        <div class="stat-label">Total Ratings</div>
                     </div>
                     
                     <!-- Rating Distribution -->
-                    <h6>Rating Distribution:</h6>
+                    <h6 class="mb-3">Rating Distribution:</h6>
                     {% for rating, count in rating_stats.rating_distribution.items %}
-                        <div class="d-flex align-items-center mb-2">
-                            <div class="me-2">{{ rating }} star{{ rating|pluralize }}:</div>
-                            <div class="progress flex-grow-1 me-2" style="height: 20px;">
-                                <div class="progress-bar" role="progressbar" 
+                        <div class="mb-2">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="small">{{ rating }} star{{ rating|pluralize }}:</span>
+                                <span class="small text-muted">{{ count }}</span>
+                            </div>
+                            <div class="progress" style="height: 8px;">
+                                <div class="progress-bar progress-bar-custom" role="progressbar" 
                                      style="width: {% if rating_stats.total_ratings > 0 %}{{ count|floatformat:0|div:rating_stats.total_ratings|mul:100 }}{% else %}0{% endif %}%">
                                 </div>
                             </div>
-                            <div class="small text-muted">{{ count }}</div>
                         </div>
                     {% endfor %}
                 </div>
@@ -84,18 +251,33 @@
     </div>
 </div>
 
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const stars = document.querySelectorAll('.star');
     const submitBtn = document.getElementById('submitRating');
     const deleteBtn = document.getElementById('deleteRating');
+    const ratingFeedback = document.getElementById('ratingFeedback');
+    const ratingDescription = document.getElementById('ratingDescription');
     const movieId = document.querySelector('.rating-stars').dataset.movieId;
     let selectedRating = 0;
+    
+    // Rating feedback messages
+    const ratingMessages = {
+        1: { feedback: "Poor", description: "Not recommended" },
+        2: { feedback: "Fair", description: "Below average" },
+        3: { feedback: "Good", description: "Average quality" },
+        4: { feedback: "Very Good", description: "Above average" },
+        5: { feedback: "Excellent", description: "Highly recommended" }
+    };
     
     // Initialize with user's existing rating
     {% if user_rating %}
         selectedRating = {{ user_rating.rating }};
         highlightStars(selectedRating);
+        updateRatingFeedback(selectedRating);
         submitBtn.disabled = false;
         submitBtn.innerHTML = '<i class="fas fa-edit me-2"></i>Update Rating';
     {% endif %}
@@ -105,6 +287,7 @@ document.addEventListener('DOMContentLoaded', function() {
         star.addEventListener('click', function() {
             selectedRating = parseInt(this.dataset.rating);
             highlightStars(selectedRating);
+            updateRatingFeedback(selectedRating);
             submitBtn.disabled = false;
             submitBtn.innerHTML = selectedRating === {{ user_rating.rating|default:0 }} ? 
                 '<i class="fas fa-edit me-2"></i>Update Rating' : 
@@ -114,27 +297,49 @@ document.addEventListener('DOMContentLoaded', function() {
         star.addEventListener('mouseenter', function() {
             const rating = parseInt(this.dataset.rating);
             highlightStars(rating);
+            updateRatingFeedback(rating);
         });
     });
     
     // Reset stars on mouse leave
     document.querySelector('.rating-stars').addEventListener('mouseleave', function() {
         highlightStars(selectedRating);
+        updateRatingFeedback(selectedRating);
     });
     
     function highlightStars(rating) {
         stars.forEach((star, index) => {
             if (index < rating) {
-                star.style.color = '#ffc107';
+                star.classList.add('active');
+                star.classList.remove('rated');
             } else {
-                star.style.color = '#ddd';
+                star.classList.remove('active');
+                if (index < selectedRating) {
+                    star.classList.add('rated');
+                } else {
+                    star.classList.remove('rated');
+                }
             }
         });
+    }
+    
+    function updateRatingFeedback(rating) {
+        if (rating > 0) {
+            const message = ratingMessages[rating];
+            ratingFeedback.textContent = message.feedback;
+            ratingDescription.textContent = message.description;
+        } else {
+            ratingFeedback.textContent = '';
+            ratingDescription.textContent = 'Click on a star to rate this movie';
+        }
     }
     
     // Submit rating
     submitBtn.addEventListener('click', function() {
         if (selectedRating === 0) return;
+        
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Submitting...';
         
         fetch(`/ratings/api/submit/${movieId}/`, {
             method: 'POST',
@@ -148,15 +353,21 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(data => {
             if (data.success) {
                 showToast(data.message, 'success');
+                // Update UI with new stats
+                updateStats(data.movie_stats);
                 // Reload page to show updated stats
-                setTimeout(() => location.reload(), 1000);
+                setTimeout(() => location.reload(), 1500);
             } else {
                 showToast(data.error, 'error');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-check me-2"></i>Submit Rating';
             }
         })
         .catch(error => {
             console.error('Error:', error);
             showToast('Error submitting rating', 'error');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-check me-2"></i>Submit Rating';
         });
     });
     
@@ -164,6 +375,9 @@ document.addEventListener('DOMContentLoaded', function() {
     if (deleteBtn) {
         deleteBtn.addEventListener('click', function() {
             if (confirm('Are you sure you want to delete your rating?')) {
+                deleteBtn.disabled = true;
+                deleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Deleting...';
+                
                 fetch(`/ratings/api/delete/${movieId}/`, {
                     method: 'DELETE',
                     headers: {
@@ -174,22 +388,71 @@ document.addEventListener('DOMContentLoaded', function() {
                 .then(data => {
                     if (data.success) {
                         showToast(data.message, 'success');
-                        setTimeout(() => location.reload(), 1000);
+                        // Update UI with new stats
+                        updateStats(data.movie_stats);
+                        // Reset rating interface
+                        selectedRating = 0;
+                        highlightStars(0);
+                        updateRatingFeedback(0);
+                        submitBtn.disabled = true;
+                        submitBtn.innerHTML = '<i class="fas fa-check me-2"></i>Submit Rating';
+                        deleteBtn.style.display = 'none';
+                        setTimeout(() => location.reload(), 1500);
                     } else {
                         showToast(data.error, 'error');
+                        deleteBtn.disabled = false;
+                        deleteBtn.innerHTML = '<i class="fas fa-trash me-2"></i>Delete Rating';
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
                     showToast('Error deleting rating', 'error');
+                    deleteBtn.disabled = false;
+                    deleteBtn.innerHTML = '<i class="fas fa-trash me-2"></i>Delete Rating';
                 });
             }
         });
     }
     
+    function updateStats(stats) {
+        // Update the statistics display with new data
+        const averageRating = document.querySelector('.stat-number');
+        if (averageRating) {
+            averageRating.textContent = stats.average_rating;
+        }
+    }
+    
     function showToast(message, type) {
-        // Simple alert for now - can be enhanced with toast notifications
-        alert(message);
+        const toastContainer = document.getElementById('toastContainer');
+        const toastId = 'toast-' + Date.now();
+        
+        const toastHTML = `
+            <div class="toast" id="${toastId}" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="toast-header ${type === 'success' ? 'bg-success' : 'bg-danger'} text-white">
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-triangle'} me-2"></i>
+                    <strong class="me-auto">${type === 'success' ? 'Success' : 'Error'}</strong>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+                <div class="toast-body">
+                    ${message}
+                </div>
+            </div>
+        `;
+        
+        toastContainer.insertAdjacentHTML('beforeend', toastHTML);
+        
+        const toastElement = document.getElementById(toastId);
+        const toast = new bootstrap.Toast(toastElement, {
+            autohide: true,
+            delay: type === 'error' ? 5000 : 3000
+        });
+        
+        toast.show();
+        
+        // Remove toast element after it's hidden
+        toastElement.addEventListener('hidden.bs.toast', function() {
+            toastElement.remove();
+        });
     }
     
     function getCookie(name) {
