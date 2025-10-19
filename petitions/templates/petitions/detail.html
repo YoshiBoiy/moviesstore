@@ -1,0 +1,199 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="mb-0">{{ template_data.petition.title }}</h2>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h5><i class="fas fa-film"></i> Movie Details</h5>
+                            <p><strong>Title:</strong> {{ template_data.petition.movie_title }}</p>
+                            {% if template_data.petition.movie_year %}
+                                <p><strong>Year:</strong> {{ template_data.petition.movie_year }}</p>
+                            {% endif %}
+                            {% if template_data.petition.movie_director %}
+                                <p><strong>Director:</strong> {{ template_data.petition.movie_director }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <h5><i class="fas fa-info-circle"></i> Petition Info</h5>
+                            <p><strong>Created by:</strong> {{ template_data.petition.created_by.username }}</p>
+                            <p><strong>Created:</strong> {{ template_data.petition.created_at|date:"F d, Y \a\t g:i A" }}</p>
+                            <p><strong>Status:</strong> 
+                                {% if template_data.petition.is_active %}
+                                    <span class="badge badge-success">Active</span>
+                                {% else %}
+                                    <span class="badge badge-secondary">Inactive</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <h5><i class="fas fa-align-left"></i> Description</h5>
+                    <p class="text-justify">{{ template_data.petition.description|linebreaks }}</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <!-- Voting Section -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-vote-yea"></i> Vote on this Petition</h5>
+                </div>
+                <div class="card-body">
+                    <!-- Vote Counts -->
+                    <div class="row text-center mb-4">
+                        <div class="col-4">
+                            <div class="text-success">
+                                <h3 class="mb-0">{{ template_data.petition.yes_count }}</h3>
+                                <small>Yes Votes</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="text-danger">
+                                <h3 class="mb-0">{{ template_data.petition.no_count }}</h3>
+                                <small>No Votes</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="text-info">
+                                <h3 class="mb-0">{{ template_data.petition.total_count }}</h3>
+                                <small>Total</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- User Vote Status -->
+                    {% if template_data.petition.user_vote %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-check-circle"></i> 
+                            You voted <strong>{{ template_data.petition.user_vote.vote_type|title }}</strong>
+                        </div>
+                    {% elif template_data.can_vote %}
+                        <!-- Voting Form -->
+                        <form method="POST" id="voteForm">
+                            {% csrf_token %}
+                            <div class="form-group">
+                                <label>Do you want this movie added to the catalog?</label>
+                                <div class="mt-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="vote_type" id="vote_yes" value="yes">
+                                        <label class="form-check-label text-success" for="vote_yes">
+                                            <i class="fas fa-thumbs-up"></i> Yes, add it!
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="vote_type" id="vote_no" value="no">
+                                        <label class="form-check-label text-danger" for="vote_no">
+                                            <i class="fas fa-thumbs-down"></i> No, don't add it
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-block">
+                                <i class="fas fa-vote-yea"></i> Submit Vote
+                            </button>
+                        </form>
+                    {% elif not user.is_authenticated %}
+                        <div class="alert alert-warning">
+                            <i class="fas fa-sign-in-alt"></i> 
+                            Please <a href="{% url 'accounts.login' %}">log in</a> to vote on this petition.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Actions -->
+            <div class="card">
+                <div class="card-body">
+                    <h6><i class="fas fa-cog"></i> Actions</h6>
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'petitions.index' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left"></i> Back to Petitions
+                        </a>
+                        {% if user.is_authenticated %}
+                            <a href="{% url 'petitions.my_petitions' %}" class="btn btn-outline-info">
+                                <i class="fas fa-user"></i> My Petitions
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Handle form submission with AJAX for better UX
+document.getElementById('voteForm')?.addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const voteType = formData.get('vote_type');
+    
+    if (!voteType) {
+        alert('Please select a vote option.');
+        return;
+    }
+    
+    fetch('{% url "petitions.vote" template_data.petition.id %}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Update vote counts
+            document.querySelector('.text-success h3').textContent = data.yes_count;
+            document.querySelector('.text-danger h3').textContent = data.no_count;
+            document.querySelector('.text-info h3').textContent = data.total_count;
+            
+            // Replace form with success message
+            document.querySelector('.card-body').innerHTML = `
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle"></i> ${data.message}
+                </div>
+                <div class="row text-center">
+                    <div class="col-4">
+                        <div class="text-success">
+                            <h3 class="mb-0">${data.yes_count}</h3>
+                            <small>Yes Votes</small>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="text-danger">
+                            <h3 class="mb-0">${data.no_count}</h3>
+                            <small>No Votes</small>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="text-info">
+                            <h3 class="mb-0">${data.total_count}</h3>
+                            <small>Total</small>
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else {
+            alert(data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while submitting your vote.');
+    });
+});
+</script>
+{% endblock %}
+
+

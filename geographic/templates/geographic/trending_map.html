@@ -1,0 +1,170 @@
+{% extends 'base.html' %}
+
+{% block title %}Local Popularity Map{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Local Popularity Map</h1>
+    <p class="lead">Discover which movies are trending in different regions</p>
+    
+    <!-- Region Selection -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <label for="regionSelect" class="form-label">Select Your Region:</label>
+            <select class="form-select" id="regionSelect">
+                <option value="">Choose a region...</option>
+                {% for region in regions %}
+                <option value="{{ region.id }}" data-lat="{{ region.latitude }}" data-lng="{{ region.longitude }}">
+                    {{ region.name }} ({{ region.code }})
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-6">
+            <button class="btn btn-primary" id="setRegionBtn" disabled>Set My Region</button>
+        </div>
+    </div>
+    
+    <!-- Map Container -->
+    <div class="row">
+        <div class="col-md-8">
+            <div id="trendingMap" style="height: 500px; border: 1px solid #ddd; border-radius: 8px;"></div>
+        </div>
+        <div class="col-md-4">
+            <div id="regionDetails" class="card" style="display: none;">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Region Details</h5>
+                </div>
+                <div class="card-body">
+                    <div id="regionInfo"></div>
+                    <div id="trendingMovies" class="mt-3">
+                        <h6>Trending Movies:</h6>
+                        <div id="moviesList"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Spinner -->
+<div id="loadingSpinner" class="text-center mt-4" style="display: none;">
+    <div class="spinner-border" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="mt-2">Loading trending data...</p>
+</div>
+
+<script>
+// Basic map functionality (Person 2 will implement the full map)
+document.addEventListener('DOMContentLoaded', function() {
+    const regionSelect = document.getElementById('regionSelect');
+    const setRegionBtn = document.getElementById('setRegionBtn');
+    const regionDetails = document.getElementById('regionDetails');
+    const regionInfo = document.getElementById('regionInfo');
+    const moviesList = document.getElementById('moviesList');
+    const loadingSpinner = document.getElementById('loadingSpinner');
+    
+    // Enable set region button when selection changes
+    regionSelect.addEventListener('change', function() {
+        setRegionBtn.disabled = !this.value;
+    });
+    
+    // Set user region
+    setRegionBtn.addEventListener('click', function() {
+        const regionId = regionSelect.value;
+        if (!regionId) return;
+        
+        fetch('/geographic/api/set-user-region/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ region_id: parseInt(regionId) })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Region set successfully!');
+                loadRegionTrending(regionId);
+            } else {
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error setting region');
+        });
+    });
+    
+    // Load trending data for selected region
+    function loadRegionTrending(regionId) {
+        loadingSpinner.style.display = 'block';
+        
+        fetch(`/geographic/api/region/${regionId}/trending/`)
+        .then(response => response.json())
+        .then(data => {
+            loadingSpinner.style.display = 'none';
+            
+            if (data.success) {
+                displayRegionDetails(regionId, data.data);
+            } else {
+                alert('Error loading trending data: ' + data.error);
+            }
+        })
+        .catch(error => {
+            loadingSpinner.style.display = 'none';
+            console.error('Error:', error);
+            alert('Error loading trending data');
+        });
+    }
+    
+    // Display region details and trending movies
+    function displayRegionDetails(regionId, movies) {
+        const selectedOption = regionSelect.options[regionSelect.selectedIndex];
+        const regionName = selectedOption.text;
+        
+        regionInfo.innerHTML = `
+            <h6>${regionName}</h6>
+            <p class="text-muted">${movies.length} trending movies</p>
+        `;
+        
+        if (movies.length > 0) {
+            moviesList.innerHTML = movies.map(movie => `
+                <div class="card mb-2">
+                    <div class="card-body p-2">
+                        <h6 class="card-title">${movie.name}</h6>
+                        <p class="card-text small text-muted">
+                            Purchases: ${movie.purchase_count} | 
+                            Score: ${movie.trending_score.toFixed(1)}
+                        </p>
+                        <p class="card-text small">$${movie.price}</p>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            moviesList.innerHTML = '<p class="text-muted">No trending movies found for this region.</p>';
+        }
+        
+        regionDetails.style.display = 'block';
+    }
+    
+    // Get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+});
+</script>
+{% endblock %}

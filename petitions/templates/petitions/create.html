@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="mb-0"><i class="fas fa-plus-circle"></i> {{ template_data.title }}</h2>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-4">
+                        Create a petition to request a movie be added to our catalog. 
+                        Other users can vote on your petition to show support.
+                    </p>
+                    
+                    <form method="POST">
+                        {% csrf_token %}
+                        
+                        <!-- Petition Title -->
+                        <div class="form-group mb-3">
+                            <label for="{{ template_data.form.title.id_for_label }}" class="form-label">
+                                <i class="fas fa-heading"></i> Petition Title *
+                            </label>
+                            {{ template_data.form.title }}
+                            {% if template_data.form.title.errors %}
+                                <div class="text-danger">
+                                    {% for error in template_data.form.title.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <small class="form-text text-muted">
+                                Give your petition a descriptive title (minimum 5 characters)
+                            </small>
+                        </div>
+                        
+                        <!-- Movie Title -->
+                        <div class="form-group mb-3">
+                            <label for="{{ template_data.form.movie_title.id_for_label }}" class="form-label">
+                                <i class="fas fa-film"></i> Movie Title *
+                            </label>
+                            {{ template_data.form.movie_title }}
+                            {% if template_data.form.movie_title.errors %}
+                                <div class="text-danger">
+                                    {% for error in template_data.form.movie_title.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <small class="form-text text-muted">
+                                Enter the exact title of the movie you want to request
+                            </small>
+                        </div>
+                        
+                        <!-- Movie Year -->
+                        <div class="form-group mb-3">
+                            <label for="{{ template_data.form.movie_year.id_for_label }}" class="form-label">
+                                <i class="fas fa-calendar"></i> Movie Year
+                            </label>
+                            {{ template_data.form.movie_year }}
+                            {% if template_data.form.movie_year.errors %}
+                                <div class="text-danger">
+                                    {% for error in template_data.form.movie_year.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <small class="form-text text-muted">
+                                Year the movie was released (optional)
+                            </small>
+                        </div>
+                        
+                        <!-- Movie Director -->
+                        <div class="form-group mb-3">
+                            <label for="{{ template_data.form.movie_director.id_for_label }}" class="form-label">
+                                <i class="fas fa-user-tie"></i> Director
+                            </label>
+                            {{ template_data.form.movie_director }}
+                            {% if template_data.form.movie_director.errors %}
+                                <div class="text-danger">
+                                    {% for error in template_data.form.movie_director.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <small class="form-text text-muted">
+                                Director's name (optional)
+                            </small>
+                        </div>
+                        
+                        <!-- Description -->
+                        <div class="form-group mb-4">
+                            <label for="{{ template_data.form.description.id_for_label }}" class="form-label">
+                                <i class="fas fa-align-left"></i> Description *
+                            </label>
+                            {{ template_data.form.description }}
+                            {% if template_data.form.description.errors %}
+                                <div class="text-danger">
+                                    {% for error in template_data.form.description.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <small class="form-text text-muted">
+                                Explain why you think this movie should be added to the catalog (minimum 20 characters)
+                            </small>
+                        </div>
+                        
+                        <!-- Form Actions -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'petitions.index' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-paper-plane"></i> Create Petition
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Guidelines -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-info-circle"></i> Petition Guidelines</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="mb-0">
+                        <li>Be respectful and constructive in your description</li>
+                        <li>Provide accurate movie information</li>
+                        <li>Explain why the movie would be valuable to our catalog</li>
+                        <li>Check if a similar petition already exists before creating a new one</li>
+                        <li>Petitions will be reviewed by administrators</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+

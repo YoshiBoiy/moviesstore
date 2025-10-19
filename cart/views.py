@@ -4,6 +4,8 @@ from movies.models import Movie
 from .utils import calculate_cart_total
 from .models import Order, Item
 from django.contrib.auth.decorators import login_required
+from geographic.models import MoviePurchase, UserRegion
+from geographic.services import RegionService
 
 def index(request):
     cart_total = 0
@@ -47,6 +49,9 @@ def purchase(request):
     order.total = cart_total
     order.save()
 
+    # Get user's region for trending calculations
+    user_region = RegionService.get_user_region(request.user)
+    
     for movie in movies_in_cart:
         item = Item()
         item.movie = movie
@@ -54,6 +59,15 @@ def purchase(request):
         item.order = order
         item.quantity = cart[str(movie.id)]
         item.save()
+        
+        # Track purchase for trending calculations if user has a region
+        if user_region:
+            MoviePurchase.objects.create(
+                movie=movie,
+                user=request.user,
+                region=user_region,
+                quantity=cart[str(movie.id)]
+            )
 
     request.session['cart'] = {}
     template_data = {}
